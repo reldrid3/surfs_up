@@ -13,3 +13,30 @@ The main results are two statistics tables on data from June and December.  Here
 ## Summary
 Overall, from the analysis above, Oahu is, like much of Hawaii, fairly stable when it comes to temperatures.  There is a slightly lower average in December, as well as the possiblity of a singular significantly cold day, but overall, both months are similar in overall temperatures.
 ### Additional Queries - Stations
+So far, this report only looked at summary statistics on observed temperatures for the whole Oahu dataset.  However, one possible idea would be to group the data by station and see if there are any relevant points about how different stations, and therefore different locales in Oahu, contrast each other.  Here is a couple of sample queries on the average precipitation and temperatures, combined and solved for the differences between June and December, all in one final table: 
+```
+june_by_station = session.query(Measurement.station, func.avg(Measurement.prcp), func.avg(Measurement.tobs)).\
+    filter(extract('month', Measurement.date) == 6).\
+    group_by(Measurement.station).all()
+
+dec_by_station = session.query(Measurement.station, func.avg(Measurement.prcp), func.avg(Measurement.tobs)).\
+    filter(extract('month', Measurement.date) == 12).\
+    group_by(Measurement.station).all()
+
+cols = ['Station','Avg_Prec','Avg_Temp']
+june_df = pd.DataFrame(june_by_station, columns=cols)
+dec_df = pd.DataFrame(dec_by_station, columns=cols)
+
+june_vs_dec_df = june_df.merge(dec_df, on='Station', suffixes=['_jun','_dec'])
+
+june_vs_dec_df['\u0394_Prec'] = june_vs_dec_df['Avg_Prec_dec'] - june_vs_dec_df['Avg_Prec_jun']
+june_vs_dec_df['\u0394_Temp'] = june_vs_dec_df['Avg_Temp_dec'] - june_vs_dec_df['Avg_Temp_jun']
+
+new_cols = ['Station','Avg_Prec_jun','Avg_Prec_dec','\u0394_Prec','Avg_Temp_jun','Avg_Temp_dec','\u0394_Temp']
+june_vs_dec_df = june_vs_dec_df[new_cols]
+```
+![](PrecTempByStation.png)
+#### Interesting Datapoints
+- Station USC00516128 has extremely high precipitation for both months, and a slightly lower average temperature as well.
+- Station USC00518838 has an extremely large *difference* in precipitation between June and December.  However, it also had the least difference in average temperatures.
+- Station USC00519397 has the greatest average temperature difference between June and December, dropping more than 6&deg;F.
